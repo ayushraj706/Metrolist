@@ -1,6 +1,5 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -19,7 +18,8 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-val baseApplicationId = "com.metrolist.music"
+// YAHAN CHANGE KIYA HAI: Ab hum Gaana app ko spoof karke test kar rahe hain
+val baseApplicationId = "com.gaana" 
 val applicationIdOverride = System.getenv("METROLIST_APPLICATION_ID")?.takeIf { it.isNotBlank() }
 val appNameOverride = System.getenv("METROLIST_APP_NAME")?.takeIf { it.isNotBlank() }
 val debugKeystorePathOverride = System.getenv("METROLIST_DEBUG_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
@@ -94,6 +94,7 @@ abstract class GenerateProtoTask : DefaultTask() {
 }
 
 android {
+    // NAMESPACE WAHI PURANA HAI TAARI CODE BREAK NA HO
     namespace = "com.metrolist.music"
     compileSdk = 37
 
@@ -323,12 +324,6 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-// Android provides org.json as a platform API (/apex/com.android.art/javalib/core-libart.jar).
-// The standalone org.json:json artefact bundles an older Apache Harmony copy of JSONArray that
-// contains an internal `myArrayList` field absent from the platform class.  Without obfuscation
-// R8 inlines against this internal field; at runtime the platform class is resolved instead,
-// producing a NoSuchFieldError.  Excluding the artefact globally ensures only the platform
-// class is ever referenced.
 configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
@@ -410,6 +405,10 @@ dependencies {
     coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.timber)
+    
+    // ---> NAYA ADDITION YAHAN HAI: Haze library for Liquid Glass UI <---
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
+    implementation("dev.chrisbanes.haze:haze-materials:1.1.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
