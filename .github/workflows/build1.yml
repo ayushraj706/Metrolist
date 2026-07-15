@@ -120,3 +120,19 @@ jobs:
             !app/build/outputs/apk/${{ matrix.variant }}/release/*armeabi-v7a*.apk
             !app/build/outputs/apk/${{ matrix.variant }}/release/*x86*.apk
           if-no-files-found: warn
+
+      # --- YAHAN NAYA TELEGRAM BOT AUR DOWNLOAD LINK ADD KIYA HAI ---
+      - name: Send Telegram Message with Download Link
+        continue-on-error: true
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ✅ Metrolist (Gaana) Build Successful!
+            
+            Commit: ${{ github.event.commits[0].message }}
+            Variant: ${{ matrix.variantName }}
+            
+            👇 Yahan click karke direct Artifacts (APK) download karein:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
