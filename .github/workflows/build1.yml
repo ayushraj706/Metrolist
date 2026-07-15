@@ -35,12 +35,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up JDK 21
+      # --- FIXED: JDK 21 se JDK 17 par switch kiya stable signing ke liye ---
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          java-version: "17"
           distribution: "temurin"
 
+      # --- FIXED: Gradle actions update ---
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -49,38 +51,38 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # --- Keystore Decode Karna (Tumhari key GitHub Secrets se aayegi) ---
+      # --- FIXED: Extension ko .keystore se badal kar .jks kiya (Jo tumne Termux me banayi thi) ---
       - name: Create Keystore Directory
         run: mkdir -p app/keystore
 
       - name: Decode Keystore
-        run: echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > app/keystore/release.keystore
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > app/keystore/release.jks
 
       # --- Build Step ---
       - name: Build Release APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Release --warning-mode summary
         env:
-          # YAHAN CHANGE KIYA HAI: Spoofing as Gaana
           METROLIST_APPLICATION_ID: com.gaana
           METROLIST_APP_NAME: Gaana
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
-          # Yahan hardcoded password ki jagah secrets laga diye:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      # --- NAYA STEP: Forcefully Sign The APK ---
+      # --- FIXED: Naya .jks extension paths ke saath apksigner loop ---
       - name: Sign APKs
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
           for apk in $(find app/build/outputs/apk/${{ matrix.variant }}/release -type f -name '*.apk'); do
+            if [[ "$apk" == *"-aligned.apk" || "$apk" == *"-signed.apk" ]]; then
+              continue
+            fi
             echo "Signing $apk"
             $BUILD_TOOLS/zipalign -f -p 4 "$apk" "${apk%.apk}-aligned.apk"
-            # Yahan bhi signing ke liye secrets laga diye:
-            $BUILD_TOOLS/apksigner sign --ks app/keystore/release.keystore --ks-pass pass:${{ secrets.STORE_PASSWORD }} --ks-key-alias ${{ secrets.KEY_ALIAS }} --key-pass pass:${{ secrets.KEY_PASSWORD }} "${apk%.apk}-aligned.apk"
+            $BUILD_TOOLS/apksigner sign --ks app/keystore/release.jks --ks-pass pass:${{ secrets.STORE_PASSWORD }} --ks-key-alias ${{ secrets.KEY_ALIAS }} --key-pass pass:${{ secrets.KEY_PASSWORD }} "${apk%.apk}-aligned.apk"
             rm "$apk"
             mv "${apk%.apk}-aligned.apk" "${apk%.apk}-signed.apk"
           done
@@ -90,7 +92,6 @@ jobs:
       - name: Upload arm64-v8a APK (BEST FOR VIVO T4X)
         uses: actions/upload-artifact@v4
         with:
-          # Yahan file ka naam Gaana kar diya hai
           name: Gaana-${{ matrix.variantName }}-arm64-v8a
           path: app/build/outputs/apk/${{ matrix.variant }}/release/*arm64-v8a*-signed.apk
           if-no-files-found: ignore
